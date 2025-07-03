@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+python-multipart
+python-dotenv
+chromadb
+openai
+aiofiles
+httpx
+pandas
+numpy
+PyPDF2 
