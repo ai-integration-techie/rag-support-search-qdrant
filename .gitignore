@@ -214,4 +214,38 @@ dmypy.json
 
 # Local development files
 local_settings.py
-settings_local.py 
+settings_local.py
+
+# Environment variables
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# React build
+frontend/build/
+frontend/dist/
+
+# Qdrant data (exclude from git but keep structure)
+qdrant_data/collections/*/segments/
+qdrant_data/collections/*/wal/
+qdrant_data/collections/*/payload_storage/
+qdrant_data/collections/*/vector_storage/
+
+# Test files
+test_*.html
+test_*.txt
+test_*.csv
+test_*.py
+debug_*.html
+report_*.csv
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# API Keys and secrets
+secrets/
+keys/ 

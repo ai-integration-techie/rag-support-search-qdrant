@@ -1,4 +1,0 @@
-title,content,category,tags
-"Test Article 1","This is a test article content for testing the upload functionality.","Testing","test, upload"
-"Test Article 2","Another test article to verify the CSV processing works correctly.","Testing","test, csv"
-"Test Article 3","Third test article to ensure the system handles multiple rows properly.","Testing","test, multiple" 
