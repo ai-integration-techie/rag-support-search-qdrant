@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     MAX_CSV_ROWS: int = 10000  # Limit CSV processing to prevent memory issues
     
     # OpenAI Configuration
-    OPENAI_API_KEY: str = "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"  # Replace with your actual API key
+    OPENAI_API_KEY: str = "sk-your_actual_openai_api_key_here"  # Replace with your actual API key
     OPENAI_MODEL: str = "gpt-3.5-turbo"
     MAX_TOKENS: int = 500
     

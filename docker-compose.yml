@@ -8,7 +8,7 @@ services:
     ports:
       - "9000:8000"
     environment:
-      - OPENAI_API_KEY=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
+      - OPENAI_API_KEY=sk-your_actual_openai_api_key_here
       - CHROMA_DB_PATH=./data/chroma_db
       - UPLOAD_DIR=./data/uploads
       - MODEL_NAME=sentence-transformers/all-MiniLM-L6-v2
