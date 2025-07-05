@@ -6,9 +6,9 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "9000:8000"
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_API_KEY=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
       - CHROMA_DB_PATH=./data/chroma_db
       - UPLOAD_DIR=./data/uploads
       - MODEL_NAME=sentence-transformers/all-MiniLM-L6-v2
@@ -21,12 +21,19 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "4000:3000"
     depends_on:
       - backend
     environment:
-      - REACT_APP_API_URL=http://localhost:8000
+      - REACT_APP_API_URL=http://localhost:9000
     restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - ./qdrant_data:/qdrant/storage
 
 volumes:
   chroma_data: 

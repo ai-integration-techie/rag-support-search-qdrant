@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "RAG Support Search"
     
     # Database Configuration
-    CHROMA_DB_PATH: str = "./data/chroma_db"
+    QDRANT_DB_PATH: str = "./data/qdrant"
     
     # File Upload Configuration
     UPLOAD_DIR: str = "./data/uploads"
@@ -20,11 +20,12 @@ class Settings(BaseSettings):
     # Model Configuration
     MODEL_NAME: str = "sentence-transformers/all-MiniLM-L6-v2"
     EMBEDDING_DIMENSION: int = 384
-    CHUNK_SIZE: int = 1000
-    CHUNK_OVERLAP: int = 200
+    CHUNK_SIZE: int = 2000  # Increased for better handling of large files
+    CHUNK_OVERLAP: int = 400  # Increased overlap
+    MAX_CSV_ROWS: int = 10000  # Limit CSV processing to prevent memory issues
     
     # OpenAI Configuration
-    OPENAI_API_KEY: str = "your_openai_api_key_here"  # Replace with your actual API key
+    OPENAI_API_KEY: str = "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"  # Replace with your actual API key
     OPENAI_MODEL: str = "gpt-3.5-turbo"
     MAX_TOKENS: int = 500
     
@@ -45,4 +46,4 @@ settings = Settings()
 
 # Ensure directories exist
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-os.makedirs(settings.CHROMA_DB_PATH, exist_ok=True) 
+os.makedirs(settings.QDRANT_DB_PATH, exist_ok=True) 

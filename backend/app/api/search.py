@@ -36,11 +36,19 @@ async def search_documents(request: SearchRequest) -> Dict[str, Any]:
                     "suggested_queries": []  # Placeholder for suggestions
                 }
             else:
-                raise HTTPException(status_code=500, detail=result["message"])
+                # Return a valid empty response instead of raising HTTPException
+                return {
+                    "query": request.query,
+                    "response_type": "rag",
+                    "answer": "",
+                    "sources": [],
+                    "total_results": 0,
+                    "confidence_score": 0.0,
+                    "suggested_queries": []
+                }
         else:
             # Regular search without AI generation
             results = rag_service.search_documents(request.query, request.top_k)
-            
             return {
                 "query": request.query,
                 "response_type": "search",

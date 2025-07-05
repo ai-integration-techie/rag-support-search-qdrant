@@ -227,6 +227,10 @@ const Upload = () => {
                     <div className="text-sm text-gray-600">
                       {formatFileSize(fileInfo.file.size)}
                     </div>
+                    {/* Show error message if upload failed */}
+                    {fileInfo.status === 'error' && fileInfo.error && (
+                      <div className="text-xs text-red-600 mt-1">{fileInfo.error}</div>
+                    )}
                   </div>
                 </div>
 
@@ -287,7 +291,7 @@ const Upload = () => {
                 <span className="font-semibold">Upload Errors</span>
               </div>
               <p className="text-sm text-red-600 mt-1">
-                Some files failed to upload. Please check the file format and try again.
+                Some files failed to upload. Please check the error message(s) below for details.
               </p>
             </div>
           )}

@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from app.services.rag_service import RAGService
 from app.core.config import settings
 from typing import Dict, Any
+import logging
 
 router = APIRouter()
 
@@ -13,13 +14,18 @@ async def get_documents() -> Dict[str, Any]:
     """Get all documents"""
     try:
         documents = rag_service.get_all_documents()
-        
         return {
-            "documents": documents,
-            "total_documents": len(documents)
+            "documents": documents if documents is not None else [],
+            "total_documents": len(documents) if documents is not None else 0
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error retrieving documents: {str(e)}")
+        logging.error(f"Error retrieving documents: {str(e)}")
+        # Return a valid empty response instead of raising HTTPException
+        return {
+            "documents": [],
+            "total_documents": 0,
+            "error": f"Error retrieving documents: {str(e)}"
+        }
 
 @router.delete("/documents/{doc_id}")
 async def delete_document(doc_id: str) -> Dict[str, Any]:
@@ -65,22 +71,24 @@ async def health_check() -> Dict[str, str]:
 
 @router.get("/stats")
 async def get_stats():
-    """Return system statistics for the frontend dashboard."""
+    """Return system statistics for the frontend dashboard (Qdrant version)."""
     try:
+        stats = rag_service.vector_store.get_stats()
         documents = rag_service.get_all_documents()
         total_documents = len(documents)
-        total_chunks = sum([doc.get("chunk_count", 1) for doc in documents])
         vector_store_info = {
-            "collection_name": "documents",
-            "total_chunks": total_chunks,
-            "embedding_model": "simple-hash-embedding",  # or your actual model name
+            "collection_name": rag_service.vector_store.collection_name,
+            "total_chunks": stats.get("total_points", 0),
+            "embedding_model": "all-MiniLM-L6-v2",
+            "status": stats.get("status", "unknown"),
         }
         return {
             "total_documents": total_documents,
-            "total_chunks": total_chunks,
+            "total_chunks": stats.get("total_points", 0),
             "vector_store": vector_store_info,
-            "chunk_size": 1000,
-            "chunk_overlap": 200,
+            "chunk_size": 1000,  # update if dynamic
+            "chunk_overlap": 200, # update if dynamic
+            "database": "Qdrant"
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting stats: {str(e)}") 

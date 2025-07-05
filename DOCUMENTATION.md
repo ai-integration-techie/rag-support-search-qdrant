@@ -15,14 +15,16 @@
 
 ## Overview
 
-RAG Support Search is a powerful document search and question-answering system that combines **Retrieval-Augmented Generation (RAG)** with semantic search capabilities. It allows users to upload documents (CSV, PDF, TXT) and get intelligent, AI-powered answers based on the content.
+RAG Support Search is a powerful document search and question-answering system that combines **Retrieval-Augmented Generation (RAG)** with semantic search capabilities. It allows users to upload documents (CSV, PDF, TXT) and get intelligent, AI-powered answers based on the content. The system has been migrated from ChromaDB to Qdrant for improved performance, scalability, and reliability.
 
 ### Key Benefits
 - **Intelligent Search**: Semantic search that understands context and meaning
 - **AI-Powered Answers**: GPT-3.5-turbo generates human-like responses
-- **Multi-Format Support**: Handles CSV, PDF, and TXT files
+- **Multi-Format Support**: Handles CSV, PDF, and TXT files with UTF-8 encoding
 - **Real-time Processing**: Instant search and answer generation
 - **User-Friendly Interface**: Modern React frontend with intuitive design
+- **Persistent Storage**: Qdrant vector database for reliable data storage
+- **Docker Deployment**: Easy setup and deployment with Docker Compose
 
 ## Architecture
 
@@ -30,10 +32,10 @@ RAG Support Search is a powerful document search and question-answering system t
 
 ```mermaid
 graph TD
-    User[User] --> Frontend[React Frontend]
-    Frontend --> Backend[FastAPI Backend]
+    User[User] --> Frontend[React Frontend<br/>Port: 4000]
+    Frontend --> Backend[FastAPI Backend<br/>Port: 9000]
     Backend --> Processor[Document Processor]
-    Backend --> VectorStore[ChromaDB Vector Store]
+    Backend --> VectorStore[Qdrant Vector Store<br/>Port: 6333]
     Backend --> OpenAI[OpenAI API]
     
     Processor --> VectorStore
@@ -54,7 +56,7 @@ graph TD
 
 **Backend:**
 - FastAPI (Python)
-- ChromaDB for vector storage
+- Qdrant for vector storage
 - OpenAI API for LLM responses
 - Sentence Transformers for embeddings
 - Uvicorn for ASGI server
@@ -71,33 +73,40 @@ graph TD
    - Support for CSV, PDF, TXT files
    - Automatic chunking and processing
    - Metadata extraction
+   - UTF-8 encoding support for CSV files
 
 2. **Semantic Search**
    - Context-aware search queries
    - Similarity scoring
    - Configurable result limits
+   - Robust error handling
 
 3. **AI-Powered Answers**
    - GPT-3.5-turbo integration
    - Context-based response generation
    - Source attribution
+   - Confidence scoring
 
 4. **Document Management**
    - View all uploaded documents
    - Delete individual documents
    - Clear all documents
+   - System statistics and health monitoring
 
 ### Advanced Features
 - **Real-time Processing**: Instant search results
-- **Error Handling**: Comprehensive error messages
+- **Error Handling**: Comprehensive error messages and recovery
 - **Responsive Design**: Works on desktop and mobile
 - **API Documentation**: Auto-generated Swagger docs
+- **Persistent Storage**: Data survives container restarts
+- **Docker Integration**: Easy deployment and scaling
 
 ## Prerequisites
 
 ### System Requirements
-- **Python 3.8+** (tested with Python 3.13)
-- **Node.js 16+** and npm
+- **Docker and Docker Compose** (recommended)
+- **Python 3.8+** (for manual installation)
+- **Node.js 16+** and npm (for manual installation)
 - **macOS/Linux/Windows** (tested on macOS)
 
 ### Required Accounts
@@ -106,16 +115,45 @@ graph TD
 ### Software Dependencies
 - **Python packages**: See `backend/requirements.txt`
 - **Node.js packages**: See `frontend/package.json`
+- **Docker images**: Python 3.9-slim, Node 18-alpine, Qdrant
 
 ## Installation & Setup
 
-### Step 1: Clone the Repository
+### Option 1: Docker Installation (Recommended)
+
+#### Step 1: Clone the Repository
 ```bash
 git clone <repository-url>
 cd RagSupportSearch
 ```
 
-### Step 2: Backend Setup
+#### Step 2: Configure OpenAI API Key
+Edit `docker-compose.yml` and update the OPENAI_API_KEY:
+```yaml
+environment:
+  - OPENAI_API_KEY=sk-your_actual_openai_api_key_here
+```
+
+#### Step 3: Start the Application
+```bash
+docker-compose up -d
+```
+
+#### Step 4: Access the Application
+- **Frontend**: http://localhost:4000
+- **Backend API**: http://localhost:9000
+- **Qdrant UI**: http://localhost:6333
+- **API Documentation**: http://localhost:9000/docs
+
+### Option 2: Manual Installation
+
+#### Step 1: Clone the Repository
+```bash
+git clone <repository-url>
+cd RagSupportSearch
+```
+
+#### Step 2: Backend Setup
 ```bash
 # Navigate to backend directory
 cd backend
@@ -133,7 +171,7 @@ venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### Step 3: Frontend Setup
+#### Step 3: Frontend Setup
 ```bash
 # Navigate to frontend directory
 cd ../frontend
@@ -142,7 +180,13 @@ cd ../frontend
 npm install
 ```
 
-### Step 4: Configuration
+#### Step 4: Start Qdrant
+```bash
+# Start Qdrant in a separate terminal
+docker run -p 6333:6333 qdrant/qdrant
+```
+
+#### Step 5: Configuration
 ```bash
 # Navigate back to backend
 cd ../backend
@@ -151,13 +195,13 @@ cd ../backend
 echo "OPENAI_API_KEY=your_openai_api_key_here" > .env
 ```
 
-### Step 5: Start the Application
+#### Step 6: Start the Application
 
 **Terminal 1 - Backend:**
 ```bash
 cd backend
 source venv/bin/activate
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 9000
 ```
 
 **Terminal 2 - Frontend:**
@@ -166,14 +210,31 @@ cd frontend
 npm start
 ```
 
-### Step 6: Access the Application
+#### Step 7: Access the Application
 - **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:8001
-- **API Documentation**: http://localhost:8001/docs
+- **Backend API**: http://localhost:9000
+- **Qdrant UI**: http://localhost:6333
+- **API Documentation**: http://localhost:9000/docs
 
 ## Configuration
 
-### Environment Variables
+### Docker Environment Variables
+
+The application uses the following environment variables in `docker-compose.yml`:
+
+```yaml
+environment:
+  - OPENAI_API_KEY=sk-your_openai_api_key_here
+  - QDRANT_HOST=host.docker.internal
+  - QDRANT_PORT=6333
+  - UPLOAD_DIR=./data/uploads
+  - MODEL_NAME=sentence-transformers/all-MiniLM-L6-v2
+  - CHUNK_SIZE=2000
+  - CHUNK_OVERLAP=400
+  - MAX_CSV_ROWS=10000
+```
+
+### Manual Environment Variables
 
 Create a `.env` file in the `backend` directory:
 
@@ -183,8 +244,9 @@ OPENAI_API_KEY=sk-your_openai_api_key_here
 OPENAI_MODEL=gpt-3.5-turbo
 MAX_TOKENS=500
 
-# Database Configuration
-CHROMA_DB_PATH=./data/chroma_db
+# Qdrant Configuration
+QDRANT_HOST=localhost
+QDRANT_PORT=6333
 
 # File Upload Configuration
 UPLOAD_DIR=./data/uploads
@@ -194,11 +256,16 @@ ALLOWED_EXTENSIONS=.txt,.pdf,.csv
 # Search Configuration
 TOP_K_RESULTS=5
 SIMILARITY_THRESHOLD=0.7
+
+# Document Processing
+CHUNK_SIZE=2000
+CHUNK_OVERLAP=400
+MAX_CSV_ROWS=10000
 ```
 
 ### Configuration File
 
-The main configuration is in `backend/app/core/config.py`:
+The main configuration is managed in `backend/app/core/config.py`:
 
 ```python
 class Settings(BaseSettings):
@@ -206,8 +273,23 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api"
     PROJECT_NAME: str = "RAG Support Search"
     
+    # Qdrant Configuration
+    QDRANT_DB_PATH: str = "./data/qdrant"
+    
+    # File Upload Configuration
+    UPLOAD_DIR: str = "./data/uploads"
+    MAX_FILE_SIZE: int = 50 * 1024 * 1024  # 50MB
+    ALLOWED_EXTENSIONS: set = {".txt", ".pdf", ".csv"}
+    
+    # Model Configuration
+    MODEL_NAME: str = "sentence-transformers/all-MiniLM-L6-v2"
+    EMBEDDING_DIMENSION: int = 384
+    CHUNK_SIZE: int = 2000
+    CHUNK_OVERLAP: int = 400
+    MAX_CSV_ROWS: int = 10000
+    
     # OpenAI Configuration
-    OPENAI_API_KEY: str = "your_api_key_here"
+    OPENAI_API_KEY: str = "your_openai_api_key_here"
     OPENAI_MODEL: str = "gpt-3.5-turbo"
     MAX_TOKENS: int = 500
     
@@ -216,233 +298,422 @@ class Settings(BaseSettings):
     SIMILARITY_THRESHOLD: float = 0.7
 ```
 
+### Key Configuration Parameters
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `CHUNK_SIZE` | 2000 | Characters per document chunk |
+| `CHUNK_OVERLAP` | 400 | Overlap between chunks |
+| `MAX_CSV_ROWS` | 10000 | Maximum CSV rows to process |
+| `TOP_K_RESULTS` | 5 | Number of search results |
+| `SIMILARITY_THRESHOLD` | 0.7 | Minimum similarity score |
+| `MAX_FILE_SIZE` | 50MB | Maximum file upload size |
+| `EMBEDDING_DIMENSION` | 384 | Vector embedding dimension |
+
 ## Usage Guide
 
-### 1. Uploading Documents
+### Getting Started
 
-**Via Web Interface:**
-1. Navigate to http://localhost:3000/upload
-2. Click "Choose File" or drag and drop files
-3. Supported formats: CSV, PDF, TXT
-4. Click "Upload" to process files
+1. **Start the Application**
+   ```bash
+   docker-compose up -d
+   ```
 
-**Via API:**
-```bash
-curl -X POST http://localhost:8001/api/upload \
-  -H "Content-Type: multipart/form-data" \
-  -F "file=@your_document.pdf"
-```
+2. **Access the Frontend**
+   - Open http://localhost:4000 in your browser
 
-### 2. Searching Documents
+3. **Upload Your First Document**
+   - Navigate to the Upload page
+   - Select a CSV, PDF, or TXT file
+   - Wait for processing to complete
 
-**Via Web Interface:**
-1. Navigate to http://localhost:3000/search
-2. Enter your question in natural language
-3. Click "Search" to get AI-powered answers
-4. View sources and confidence scores
+4. **Search with AI**
+   - Go to the Search page
+   - Enter your question
+   - Get AI-powered answers with sources
 
-**Via API:**
-```bash
-curl -X POST http://localhost:8001/api/search \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "How do I reset my password?",
-    "use_rag": true,
-    "top_k": 5
-  }'
-```
+### Document Upload
 
-### 3. Managing Documents
+#### Supported File Types
+- **CSV**: Tabular data with UTF-8 encoding
+- **PDF**: Text extraction from PDF documents
+- **TXT**: Plain text files
 
-**Via Web Interface:**
-1. Navigate to http://localhost:3000/documents
-2. View all uploaded documents
-3. Delete individual documents
-4. Clear all documents
+#### Upload Process
+1. **File Selection**: Choose a file up to 50MB
+2. **Validation**: File type and size validation
+3. **Processing**: Text extraction and chunking
+4. **Embedding**: Vector embedding generation
+5. **Storage**: Storage in Qdrant vector database
 
-**Via API:**
-```bash
-# List all documents
-curl http://localhost:8001/api/documents
+#### CSV File Requirements
+- UTF-8 encoding (use `iconv` to convert if needed)
+- Maximum 10,000 rows (configurable)
+- First row as headers (optional)
 
-# Delete a document
-curl -X DELETE http://localhost:8001/api/documents/{doc_id}
+### Search and AI Responses
 
-# Clear all documents
-curl -X POST http://localhost:8001/api/documents/clear
-```
+#### Search Types
+1. **Semantic Search**: Find relevant documents
+2. **AI-Powered Search**: Generate answers with context
+3. **Hybrid Search**: Combine both approaches
+
+#### Search Process
+1. **Query Processing**: Convert query to embedding
+2. **Vector Search**: Find similar documents in Qdrant
+3. **Context Retrieval**: Extract relevant text chunks
+4. **AI Generation**: Generate response using OpenAI
+5. **Result Formatting**: Return answer with sources
+
+#### Example Queries
+- "How do I reset my password?"
+- "What are the common login issues?"
+- "Show me support cases from January 2024"
+
+### Document Management
+
+#### View Documents
+- Navigate to Documents page
+- See all uploaded documents
+- View processing statistics
+- Check system health
+
+#### Delete Documents
+- Select individual documents for deletion
+- Clear all documents if needed
+- Automatic cleanup of associated data
+
+#### System Statistics
+- Total documents uploaded
+- Vector database information
+- Processing statistics
+- System health status
 
 ## API Reference
 
-### Search Endpoints
+### Base URL
+- **Docker**: http://localhost:9000
+- **Manual**: http://localhost:9000
 
-#### POST /api/search
-Search for documents and optionally generate AI responses.
+### Authentication
+Currently, the API does not require authentication. For production use, implement proper authentication.
 
-**Request Body:**
-```json
+### Endpoints
+
+#### 1. Upload Document
+```http
+POST /api/upload
+Content-Type: multipart/form-data
+
+Parameters:
+- file: File to upload (CSV, PDF, TXT)
+
+Response:
 {
-  "query": "string",
-  "top_k": 5,
-  "use_rag": true
+  "success": true,
+  "message": "Successfully processed 5 document chunks",
+  "chunks_processed": 5,
+  "file_type": "csv"
 }
 ```
 
-**Response:**
-```json
+#### 2. Search Documents
+```http
+POST /api/search
+Content-Type: application/json
+
+Request Body:
 {
-  "query": "string",
+  "query": "How do I reset my password?",
+  "use_rag": true,
+  "top_k": 5
+}
+
+Response:
+{
+  "query": "How do I reset my password?",
   "response_type": "rag",
-  "answer": "AI-generated answer",
+  "answer": "Based on the context...",
   "sources": [...],
-  "total_results": 5,
+  "total_results": 3,
   "confidence_score": 0.9,
   "suggested_queries": []
 }
 ```
 
-#### POST /api/search-and-generate
-Alternative endpoint for RAG functionality.
+#### 3. Get All Documents
+```http
+GET /api/documents
 
-### Upload Endpoints
-
-#### POST /api/upload
-Upload a single document.
-
-**Request:** Multipart form data with file
-
-**Response:**
-```json
+Response:
 {
-  "success": true,
-  "message": "Successfully processed 10 document chunks",
-  "chunks_processed": 10,
-  "file_type": "pdf"
+  "documents": [
+    {
+      "id": "doc_id",
+      "title": "Document Title",
+      "type": "csv",
+      "upload_date": "2024-01-15T10:30:00Z",
+      "chunks": 5
+    }
+  ],
+  "total_documents": 10
 }
 ```
 
-### Document Management Endpoints
+#### 4. Get System Statistics
+```http
+GET /api/stats
 
-#### GET /api/documents
-List all documents.
+Response:
+{
+  "total_documents": 10,
+  "total_chunks": 45,
+  "vector_store": {
+    "type": "Qdrant",
+    "collection_name": "documents",
+    "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "dimension": 384
+  },
+  "system_health": "healthy"
+}
+```
 
-#### DELETE /api/documents/{doc_id}
-Delete a specific document.
+#### 5. Delete Document
+```http
+DELETE /api/documents/{doc_id}
 
-#### POST /api/documents/clear
-Clear all documents.
+Response:
+{
+  "success": true,
+  "message": "Document deleted successfully"
+}
+```
 
-### Health Check
+#### 6. Clear All Documents
+```http
+POST /api/documents/clear
 
-#### GET /api/health
-Check API health status.
+Response:
+{
+  "success": true,
+  "message": "All documents cleared successfully"
+}
+```
+
+#### 7. Health Check
+```http
+GET /api/health
+
+Response:
+{
+  "status": "healthy",
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+### Error Responses
+
+All endpoints return consistent error responses:
+
+```json
+{
+  "detail": "Error message description"
+}
+```
+
+Common HTTP status codes:
+- `200`: Success
+- `400`: Bad Request (invalid input)
+- `404`: Not Found
+- `500`: Internal Server Error
 
 ## Troubleshooting
 
 ### Common Issues
 
-#### 1. Backend Won't Start
-**Error:** `ModuleNotFoundError: No module named 'uvicorn'`
-**Solution:**
+#### Docker Issues
+
+**Containers won't start?**
 ```bash
-cd backend
-source venv/bin/activate
-pip install uvicorn
+# Check if ports are available
+docker-compose down
+docker-compose up -d
+
+# Check logs
+docker-compose logs backend
+docker-compose logs frontend
+docker-compose logs qdrant
 ```
 
-#### 2. OpenAI API Errors
-**Error:** `Error generating response: Invalid API key`
-**Solution:**
-- Verify your OpenAI API key in `backend/app/core/config.py`
-- Ensure the key starts with `sk-`
-- Check your OpenAI account balance
+**Port conflicts?**
+- Ensure ports 4000, 9000, and 6333 are available
+- Stop other services using these ports
+- Check with: `lsof -i :4000`, `lsof -i :9000`, `lsof -i :6333`
 
-#### 3. Port Already in Use
-**Error:** `[Errno 48] Address already in use`
-**Solution:**
+#### API Issues
+
+**No AI responses?**
+- Verify OpenAI API key is correct in `docker-compose.yml`
+- Check OpenAI account has sufficient credits
+- Ensure backend is running on port 9000
+- Check backend logs for API errors
+
+**Network errors in frontend?**
+- Verify backend is accessible at http://localhost:9000
+- Check CORS configuration
+- Ensure frontend is pointing to correct backend URL
+
+#### File Upload Issues
+
+**CSV encoding errors?**
 ```bash
-# Kill process on port 8001
-lsof -ti:8001 | xargs kill -9
+# Convert CSV files to UTF-8 (macOS/Linux)
+iconv -f ISO-8859-1 -t UTF-8 input.csv > output.csv
 
-# Or use a different port
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8002
+# Or use Python
+python -c "import pandas as pd; df = pd.read_csv('input.csv', encoding='latin-1'); df.to_csv('output.csv', index=False, encoding='utf-8')"
 ```
 
-#### 4. Frontend Proxy Errors
-**Error:** `Proxy error: Could not proxy request`
-**Solution:**
-- Ensure backend is running on port 8001
-- Check `frontend/package.json` proxy configuration
-- Restart both frontend and backend
-
-#### 5. File Upload Failures
-**Error:** `500 Internal Server Error`
-**Solution:**
+**File too large?**
 - Check file size (max 50MB)
-- Verify file format (CSV, PDF, TXT)
-- Check backend logs for detailed error
+- Reduce CSV row count (max 10,000 rows)
+- Split large files into smaller chunks
 
-### Debug Mode
+**Unsupported file type?**
+- Ensure file has .csv, .pdf, or .txt extension
+- Check file is not corrupted
+- Verify file contains readable text
 
-Enable debug logging in the backend:
+#### Qdrant Issues
 
-```python
-# In backend/app/main.py
-import logging
-logging.basicConfig(level=logging.DEBUG)
+**Connection errors?**
+- Ensure Qdrant is running on port 6333
+- Check `host.docker.internal` is accessible (Mac/Windows)
+- Verify Docker network configuration
+- Check Qdrant logs: `docker-compose logs qdrant`
+
+**Collection creation errors?**
+- Backend handles "collection already exists" errors automatically
+- Check Qdrant UI at http://localhost:6333
+- Restart backend if needed: `docker-compose restart backend`
+
+### Debugging Tools
+
+#### Logs
+```bash
+# Backend logs
+docker-compose logs backend
+
+# Frontend logs
+docker-compose logs frontend
+
+# Qdrant logs
+docker-compose logs qdrant
+
+# Follow logs in real-time
+docker-compose logs -f backend
 ```
 
-### Logs Location
-- **Backend logs**: Terminal where uvicorn is running
-- **Frontend logs**: Browser Developer Tools Console
-- **ChromaDB logs**: `backend/data/chroma_db/`
+#### Health Checks
+```bash
+# Backend health
+curl http://localhost:9000/api/health
+
+# System stats
+curl http://localhost:9000/api/stats
+
+# Qdrant status
+curl http://localhost:6333/collections
+```
+
+#### Database Inspection
+- **Qdrant UI**: http://localhost:6333
+- **API Documentation**: http://localhost:9000/docs
+- **Frontend**: http://localhost:4000
+
+### Performance Issues
+
+**Slow search responses?**
+- Check OpenAI API response times
+- Monitor Qdrant performance
+- Consider reducing chunk size
+- Check system resources
+
+**Memory issues?**
+- Reduce MAX_CSV_ROWS in configuration
+- Monitor Docker container memory usage
+- Restart containers if needed
 
 ## Development
 
-### Project Structure
-```
-RagSupportSearch/
-├── backend/
-│   ├── app/
-│   │   ├── api/           # API endpoints
-│   │   │   ├── core/          # Configuration
-│   │   │   ├── models/        # Data models
-│   │   │   └── services/      # Business logic
-│   │   ├── data/              # Data storage
-│   │   └── requirements.txt   # Python dependencies
-│   ├── frontend/
-│   │   ├── src/
-│   │   │   ├── components/    # React components
-│   │   │   ├── pages/         # Page components
-│   │   │   └── services/      # API services
-│   │   └── package.json       # Node.js dependencies
-│   └── README.md
+### Local Development Setup
+
+#### Prerequisites
+- Python 3.8+
+- Node.js 16+
+- Docker (for Qdrant)
+
+#### Backend Development
+```bash
+cd backend
+source venv/bin/activate
+pip install -r requirements.txt
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 9000
 ```
 
-### Adding New Features
-
-#### 1. New API Endpoint
-```python
-# In backend/app/api/your_endpoint.py
-from fastapi import APIRouter
-
-router = APIRouter()
-
-@router.get("/your-endpoint")
-async def your_function():
-    return {"message": "Hello World"}
+#### Frontend Development
+```bash
+cd frontend
+npm install
+npm start
 ```
 
-#### 2. New Frontend Component
-```jsx
-// In frontend/src/components/YourComponent.js
-import React from 'react';
+#### Qdrant for Development
+```bash
+docker run -p 6333:6333 qdrant/qdrant
+```
 
-const YourComponent = () => {
-  return <div>Your Component</div>;
-};
+### Code Structure
 
-export default YourComponent;
+#### Backend Structure
+```
+backend/
+├── app/
+│   ├── api/              # API endpoints
+│   │   ├── documents.py  # Document management
+│   │   ├── search.py     # Search endpoints
+│   │   └── upload.py     # Upload endpoints
+│   ├── core/
+│   │   └── config.py     # Configuration
+│   ├── models/
+│   │   └── document.py   # Data models
+│   ├── services/
+│   │   ├── document_processor.py  # Document processing
+│   │   ├── rag_service.py        # RAG orchestration
+│   │   └── vector_store.py       # Qdrant operations
+│   └── main.py           # Application entry point
+├── data/                 # Data storage
+├── requirements.txt      # Python dependencies
+└── Dockerfile           # Docker configuration
+```
+
+#### Frontend Structure
+```
+frontend/
+├── src/
+│   ├── components/       # Reusable components
+│   │   └── Navbar.js
+│   ├── pages/           # Page components
+│   │   ├── Home.js
+│   │   ├── Search.js
+│   │   ├── Upload.js
+│   │   └── Documents.js
+│   ├── services/
+│   │   └── api.js       # API client
+│   ├── App.js           # Main component
+│   └── index.js         # Entry point
+├── package.json         # Node.js dependencies
+└── Dockerfile          # Docker configuration
 ```
 
 ### Testing
@@ -451,7 +722,7 @@ export default YourComponent;
 ```bash
 cd backend
 source venv/bin/activate
-python -m pytest
+python -m pytest tests/
 ```
 
 #### Frontend Testing
@@ -460,105 +731,138 @@ cd frontend
 npm test
 ```
 
-### Code Quality
+#### Integration Testing
+```bash
+# Start services
+docker-compose up -d
 
-#### Backend
-- Use `black` for code formatting
-- Use `flake8` for linting
-- Follow PEP 8 style guide
+# Run tests
+curl -X POST http://localhost:9000/api/upload \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@test_document.csv"
 
-#### Frontend
-- Use `prettier` for code formatting
-- Use `eslint` for linting
-- Follow React best practices
+curl -X POST http://localhost:9000/api/search \
+  -H "Content-Type: application/json" \
+  -d '{"query": "test query", "use_rag": true}'
+```
 
 ## Deployment
 
-### Production Setup
+### Docker Deployment
 
-#### 1. Environment Variables
-Set production environment variables:
-```bash
-export OPENAI_API_KEY="your_production_key"
-export SECRET_KEY="your_secret_key"
-export DEBUG=False
+#### Production Docker Compose
+```yaml
+version: '3.8'
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "9000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+    volumes:
+      - ./backend/data:/app/data
+    restart: unless-stopped
+    depends_on:
+      - qdrant
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "4000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:9000
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  qdrant:
+    image: qdrant/qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - ./qdrant_data:/qdrant/storage
+    restart: unless-stopped
 ```
 
-#### 2. Backend Deployment
-```bash
-# Install production dependencies
-pip install gunicorn
-
-# Run with gunicorn
-gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker
+#### Environment Variables
+Create a `.env` file for production:
+```env
+OPENAI_API_KEY=sk-your_production_openai_api_key_here
 ```
 
-#### 3. Frontend Deployment
-```bash
-# Build for production
-npm run build
+### Cloud Deployment
 
-# Serve with nginx or similar
-```
+#### AWS Deployment
+1. **EC2 Setup**
+   ```bash
+   # Install Docker
+   sudo yum update -y
+   sudo yum install -y docker
+   sudo service docker start
+   sudo usermod -a -G docker ec2-user
+   
+   # Install Docker Compose
+   sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+   sudo chmod +x /usr/local/bin/docker-compose
+   ```
 
-#### 4. Docker Deployment
-```bash
-# Build and run with Docker Compose
-docker-compose up -d
-```
+2. **Application Deployment**
+   ```bash
+   git clone <repository-url>
+   cd RagSupportSearch
+   # Edit docker-compose.yml with production settings
+   docker-compose up -d
+   ```
 
-### Security Considerations
+#### Azure Deployment
+1. **Azure Container Instances**
+   ```bash
+   # Deploy Qdrant
+   az container create \
+     --resource-group myResourceGroup \
+     --name qdrant \
+     --image qdrant/qdrant \
+     --ports 6333
+   
+   # Deploy Backend
+   az container create \
+     --resource-group myResourceGroup \
+     --name backend \
+     --image your-registry/backend:latest \
+     --ports 9000
+   ```
 
-1. **API Key Security**
-   - Never commit API keys to version control
-   - Use environment variables
-   - Rotate keys regularly
+### Production Considerations
 
-2. **File Upload Security**
-   - Validate file types
-   - Limit file sizes
-   - Scan for malware
+#### Security
+- **HTTPS**: Use reverse proxy (Nginx) with SSL certificates
+- **Authentication**: Implement user authentication
+- **API Keys**: Secure storage of OpenAI API keys
+- **Network Security**: Firewall configuration
 
-3. **CORS Configuration**
-   - Configure allowed origins
-   - Restrict API access
+#### Monitoring
+- **Health Checks**: Regular health check endpoints
+- **Logging**: Centralized logging with ELK stack
+- **Metrics**: Application performance monitoring
+- **Alerts**: Automated alerting for issues
 
-4. **Rate Limiting**
-   - Implement API rate limiting
-   - Monitor usage
+#### Backup
+- **Qdrant Data**: Regular backups of vector database
+- **Uploaded Files**: Backup of document storage
+- **Configuration**: Version control for configuration
 
-### Monitoring
+#### Scaling
+- **Load Balancing**: Multiple backend instances
+- **Database Scaling**: Qdrant clustering
+- **CDN**: Static asset delivery
+- **Caching**: Redis for performance optimization
 
-#### Health Checks
-- Monitor `/api/health` endpoint
-- Set up alerts for downtime
+---
 
-#### Performance Monitoring
-- Monitor response times
-- Track API usage
-- Monitor OpenAI API costs
-
-#### Logging
-- Implement structured logging
-- Monitor error rates
-- Track user activity
-
-## Support
-
-### Getting Help
-1. Check this documentation
-2. Review the troubleshooting section
-3. Check GitHub issues
-4. Contact the development team
-
-### Contributing
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
-### License
-This project is licensed under the MIT License.
+**Need help?** Check the troubleshooting section above or open an issue on GitHub.
 
 ---
 

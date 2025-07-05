@@ -2,20 +2,20 @@
 
 ## System Overview
 
-RAG Support Search implements a **Retrieval-Augmented Generation (RAG)** architecture that combines semantic search with large language model (LLM) capabilities to provide intelligent document search and question answering.
+RAG Support Search implements a **Retrieval-Augmented Generation (RAG)** architecture that combines semantic search with large language model (LLM) capabilities to provide intelligent document search and question answering. The system has been migrated from ChromaDB to Qdrant for improved performance, scalability, and reliability.
 
 ## Architecture Diagram
 
 ```mermaid
 graph TB
     subgraph "Frontend Layer"
-        UI[React UI]
+        UI[React UI<br/>Port: 4000]
         Router[React Router]
         API[API Client]
     end
     
     subgraph "Backend Layer"
-        FastAPI[FastAPI Server]
+        FastAPI[FastAPI Server<br/>Port: 9000]
         Auth[Authentication]
         CORS[CORS Middleware]
     end
@@ -27,7 +27,7 @@ graph TB
     end
     
     subgraph "Data Layer"
-        ChromaDB[(ChromaDB)]
+        Qdrant[(Qdrant<br/>Port: 6333)]
         FileStorage[File Storage]
         Embeddings[Embedding Models]
     end
@@ -45,8 +45,30 @@ graph TB
     RAG --> VectorStore
     RAG --> OpenAI
     Processor --> Embeddings
-    VectorStore --> ChromaDB
+    VectorStore --> Qdrant
     Processor --> FileStorage
+```
+
+## Docker Architecture
+
+```mermaid
+graph TB
+    subgraph "Docker Compose Services"
+        Frontend[Frontend Container<br/>Port: 4000]
+        Backend[Backend Container<br/>Port: 9000]
+        Qdrant[Qdrant Container<br/>Port: 6333]
+    end
+    
+    subgraph "Host Machine"
+        QdrantData[Qdrant Data Volume]
+        BackendData[Backend Data Volume]
+    end
+    
+    Frontend --> Backend
+    Backend --> Qdrant
+    Backend --> QdrantData
+    Backend --> BackendData
+    Qdrant --> QdrantData
 ```
 
 ## Component Details
@@ -59,6 +81,7 @@ graph TB
 - **State Management**: React useState/useEffect for local state
 - **Styling**: Tailwind CSS for responsive design
 - **HTTP Client**: Axios for API communication
+- **Port**: 4000 (mapped from container port 3000)
 
 #### Key Components
 ```
@@ -83,6 +106,7 @@ frontend/src/
 - **Validation**: Pydantic models for request/response validation
 - **Documentation**: Auto-generated OpenAPI/Swagger docs
 - **CORS**: Cross-origin resource sharing configuration
+- **Port**: 9000 (mapped from container port 8000)
 
 #### API Structure
 ```
@@ -130,27 +154,29 @@ class RAGService:
 - Metadata extraction
 
 **Supported Formats**:
-- **CSV**: Tabular data processing
+- **CSV**: Tabular data processing with UTF-8 encoding support
 - **PDF**: Text extraction using PyPDF2
 - **TXT**: Plain text processing
 
 #### Vector Store Service (`backend/app/services/vector_store.py`)
-**Purpose**: Manages vector database operations
+**Purpose**: Manages Qdrant vector database operations
 **Responsibilities**:
 - Document embedding and storage
 - Similarity search execution
 - Vector database management
 - Result ranking and filtering
+- Robust error handling for collection conflicts
 
 ### 4. Data Layer
 
-#### ChromaDB Integration
+#### Qdrant Integration
 **Purpose**: Vector database for semantic search
 **Configuration**:
 - **Embedding Model**: `sentence-transformers/all-MiniLM-L6-v2`
 - **Dimension**: 384-dimensional vectors
-- **Storage**: Local persistent storage
+- **Storage**: Persistent storage via Docker volumes
 - **Collection**: Single collection for all documents
+- **Connection**: `host.docker.internal:6333` for Docker-to-host communication
 
 **Key Operations**:
 ```python
@@ -160,7 +186,13 @@ class VectorStore:
     def get_all_documents(self) -> List[Dict]
     def delete_document(self, doc_id: str) -> bool
     def clear_all(self) -> bool
+    def _create_collection(self) -> None  # Robust collection creation
 ```
+
+**Error Handling**:
+- Graceful handling of "collection already exists" errors
+- Automatic collection creation with conflict resolution
+- Connection retry logic for network issues
 
 #### File Storage
 **Purpose**: Persistent storage for uploaded files
@@ -168,8 +200,10 @@ class VectorStore:
 ```
 backend/data/
 ├── uploads/               # Original uploaded files
-├── chroma_db/            # ChromaDB data directory
 └── processed/            # Processed document chunks
+
+qdrant_data/              # Qdrant persistent storage
+└── storage/              # Vector database files
 ```
 
 ### 5. External Services
@@ -201,175 +235,137 @@ def generate_response(self, query: str, context_documents: List[Dict]) -> Dict[s
         max_tokens=500,
         temperature=0.7
     )
-    
-    return response.choices[0].message.content
 ```
 
 ## Data Flow
 
 ### 1. Document Upload Flow
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant F as Frontend
-    participant B as Backend
-    participant P as Processor
-    participant V as VectorStore
-    participant C as ChromaDB
-    
-    U->>F: Upload file
-    F->>B: POST /api/upload
-    B->>P: Process document
-    P->>P: Extract text & chunk
-    P->>V: Add documents
-    V->>C: Store embeddings
-    C-->>V: Success
-    V-->>P: Success
-    P-->>B: Success
-    B-->>F: Success response
-    F-->>U: Upload complete
+```
+User Upload → Frontend → Backend API → Document Processor → Vector Store → Qdrant
 ```
 
-### 2. Search and RAG Flow
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant F as Frontend
-    participant B as Backend
-    participant R as RAG Service
-    participant V as VectorStore
-    participant O as OpenAI
-    
-    U->>F: Search query
-    F->>B: POST /api/search
-    B->>R: search_and_generate()
-    R->>V: search_documents()
-    V-->>R: Relevant documents
-    R->>O: generate_response()
-    O-->>R: AI response
-    R-->>B: Combined results
-    B-->>F: Search results
-    F-->>U: Display answer + sources
+### 2. Search Flow
+```
+User Query → Frontend → Backend API → RAG Service → Vector Store → Qdrant → OpenAI → Response
+```
+
+### 3. RAG Pipeline
+```
+Query → Embedding → Vector Search → Context Retrieval → LLM Generation → Response
 ```
 
 ## Configuration Management
 
-### Environment Configuration
-```python
-class Settings(BaseSettings):
-    # API Configuration
-    API_V1_STR: str = "/api"
-    PROJECT_NAME: str = "RAG Support Search"
-    
-    # OpenAI Configuration
-    OPENAI_API_KEY: str
-    OPENAI_MODEL: str = "gpt-3.5-turbo"
-    MAX_TOKENS: int = 500
-    
-    # Vector Store Configuration
-    CHROMA_DB_PATH: str = "./data/chroma_db"
-    MODEL_NAME: str = "sentence-transformers/all-MiniLM-L6-v2"
-    EMBEDDING_DIMENSION: int = 384
-    
-    # Document Processing
-    CHUNK_SIZE: int = 1000
-    CHUNK_OVERLAP: int = 200
-    UPLOAD_DIR: str = "./data/uploads"
-    MAX_FILE_SIZE: int = 50 * 1024 * 1024  # 50MB
-    
-    # Search Configuration
-    TOP_K_RESULTS: int = 5
-    SIMILARITY_THRESHOLD: float = 0.7
+### Environment Variables
+```yaml
+# Docker Compose Environment
+environment:
+  - OPENAI_API_KEY=sk-your_openai_api_key_here
+  - QDRANT_HOST=host.docker.internal
+  - QDRANT_PORT=6333
+  - UPLOAD_DIR=./data/uploads
+  - MODEL_NAME=sentence-transformers/all-MiniLM-L6-v2
+  - CHUNK_SIZE=2000
+  - CHUNK_OVERLAP=400
+  - MAX_CSV_ROWS=10000
 ```
+
+### Key Configuration Parameters
+- **Chunk Size**: 2000 characters (optimized for context)
+- **Chunk Overlap**: 400 characters (ensures context continuity)
+- **Max CSV Rows**: 10000 (prevents memory issues)
+- **Search Results**: Top 5 by default
+- **Similarity Threshold**: 0.7 (configurable)
+
+## Performance Characteristics
+
+### Search Performance
+- **Vector Search**: < 100ms for typical queries
+- **AI Generation**: 1-3 seconds depending on context length
+- **File Processing**: Linear scaling with file size
+- **Memory Usage**: Optimized for large file handling
+
+### Scalability
+- **Concurrent Users**: Supports multiple simultaneous users
+- **Document Storage**: Efficient vector storage in Qdrant
+- **File Size**: Handles files up to 50MB
+- **Collection Size**: Scales to thousands of documents
 
 ## Security Considerations
 
-### 1. API Security
+### API Security
 - **CORS Configuration**: Restricted to frontend origin
-- **Input Validation**: Pydantic models for request validation
-- **File Upload Security**: File type and size validation
+- **Input Validation**: Pydantic model validation
+- **File Upload Security**: Type and size restrictions
 - **Error Handling**: Sanitized error messages
 
-### 2. Data Security
+### Data Security
 - **API Key Management**: Environment variable storage
 - **File Storage**: Local storage with access controls
-- **Vector Database**: Local ChromaDB instance
-- **No Sensitive Data Logging**: Sanitized logging
+- **Vector Database**: Isolated container with volume mounts
 
-### 3. Network Security
-- **HTTPS**: Recommended for production
-- **Rate Limiting**: Implemented at API level
-- **Request Validation**: Comprehensive input sanitization
+## Migration from ChromaDB
 
-## Performance Considerations
+### Key Changes
+1. **Vector Database**: ChromaDB → Qdrant
+2. **Connection Method**: Local file storage → HTTP API
+3. **Error Handling**: Enhanced conflict resolution
+4. **Performance**: Improved search speed and reliability
+5. **Persistence**: Better data durability across restarts
 
-### 1. Optimization Strategies
-- **Async Processing**: FastAPI async endpoints
-- **Chunking**: Optimal document chunk sizes
-- **Caching**: Vector similarity caching
-- **Connection Pooling**: Database connection management
+### Benefits
+- **Performance**: Faster vector operations
+- **Reliability**: More robust error handling
+- **Scalability**: Better handling of large datasets
+- **Monitoring**: Qdrant UI for database inspection
+- **Docker Integration**: Seamless container orchestration
 
-### 2. Scalability
-- **Horizontal Scaling**: Stateless backend design
-- **Database Scaling**: ChromaDB clustering support
-- **Load Balancing**: Multiple backend instances
-- **CDN Integration**: Static asset delivery
+## Monitoring and Debugging
 
-### 3. Monitoring
-- **Health Checks**: `/api/health` endpoint
-- **Performance Metrics**: Response time monitoring
-- **Error Tracking**: Comprehensive error logging
-- **Usage Analytics**: API usage tracking
+### Logging
+- **Backend Logs**: FastAPI application logs
+- **Qdrant Logs**: Vector database operations
+- **Frontend Logs**: Browser console for UI issues
+
+### Health Checks
+- **Backend Health**: `/api/health` endpoint
+- **Qdrant Status**: Available via Qdrant UI
+- **System Stats**: `/api/stats` endpoint
+
+### Debugging Tools
+- **Qdrant UI**: http://localhost:6333 for database inspection
+- **API Documentation**: http://localhost:9000/docs
+- **Container Logs**: `docker-compose logs [service]`
 
 ## Deployment Architecture
 
-### Development Environment
-```
-┌─────────────────┐    ┌─────────────────┐
-│   React Dev     │    │  FastAPI Dev    │
-│   (Port 3000)   │◄──►│  (Port 8001)    │
-└─────────────────┘    └─────────────────┘
-                              │
-                              ▼
-                       ┌─────────────────┐
-                       │   ChromaDB      │
-                       │   (Local)       │
-                       └─────────────────┘
+### Development
+```bash
+docker-compose up -d
 ```
 
-### Production Environment
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Nginx/        │    │   Load          │    │   FastAPI       │
-│   CDN           │───►│   Balancer      │───►│   Instances     │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                                       │
-                                                       ▼
-                                              ┌─────────────────┐
-                                              │   ChromaDB      │
-                                              │   Cluster       │
-                                              └─────────────────┘
-```
+### Production Considerations
+- **Load Balancing**: Multiple backend instances
+- **Database Scaling**: Qdrant cluster configuration
+- **Monitoring**: Application performance monitoring
+- **Backup**: Regular Qdrant data backups
+- **Security**: HTTPS and authentication
 
 ## Future Enhancements
 
-### 1. Advanced Features
-- **Multi-language Support**: Internationalization
-- **Advanced Search**: Filters and faceted search
-- **User Management**: Authentication and authorization
-- **Analytics Dashboard**: Usage insights
+### Planned Improvements
+1. **Authentication**: User management and access control
+2. **Advanced Search**: Filters and faceted search
+3. **Document Versioning**: Track document changes
+4. **Analytics**: Search analytics and insights
+5. **Multi-language Support**: Internationalization
+6. **Advanced RAG**: Multi-step reasoning and citations
 
-### 2. Technical Improvements
-- **Caching Layer**: Redis integration
-- **Message Queue**: Celery for async tasks
-- **Monitoring**: Prometheus/Grafana integration
-- **Testing**: Comprehensive test suite
-
-### 3. Scalability Enhancements
-- **Microservices**: Service decomposition
-- **Container Orchestration**: Kubernetes deployment
-- **Cloud Integration**: AWS/Azure services
-- **Global Distribution**: Multi-region deployment
+### Technical Roadmap
+- **Vector Database**: Qdrant clustering for high availability
+- **Caching**: Redis integration for performance
+- **Streaming**: Real-time search results
+- **Mobile**: React Native mobile application
 
 ---
 

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Connectivity Test - New Port</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .log { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>Backend Connectivity Test - New Port (8081)</h1>
+    <button onclick="testHealth()">Test Health Endpoint (8081)</button>
+    <button onclick="testUpload()">Test Upload Endpoint (8081)</button>
+    <div id="result"></div>
+    <div id="logs"></div>
+
+    <script>
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const logDiv = document.createElement('div');
+            logDiv.className = `log ${type}`;
+            logDiv.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+            logsDiv.appendChild(logDiv);
+        }
+
+        async function testHealth() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing health endpoint on port 8081...';
+            
+            try {
+                log('Testing GET http://localhost:8081/api/health...');
+                const response = await fetch('http://localhost:8081/api/health');
+                log(`Response status: ${response.status} ${response.statusText}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`Health response: ${JSON.stringify(data)}`, 'success');
+                    resultDiv.innerHTML = `Health check successful: ${JSON.stringify(data)}`;
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                log(`Health check failed: ${error.message}`, 'error');
+                resultDiv.innerHTML = `Health check failed: ${error.message}`;
+            }
+        }
+
+        async function testUpload() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing upload endpoint on port 8081...';
+            
+            // Create a simple test file
+            const testContent = 'This is a test file for upload testing.';
+            const testFile = new File([testContent], 'test.txt', { type: 'text/plain' });
+            
+            const formData = new FormData();
+            formData.append('file', testFile);
+            
+            try {
+                log('Testing POST http://localhost:8081/api/upload...');
+                const response = await fetch('http://localhost:8081/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                log(`Response status: ${response.status} ${response.statusText}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`Upload response: ${JSON.stringify(data)}`, 'success');
+                    resultDiv.innerHTML = `Upload test successful: ${JSON.stringify(data)}`;
+                } else {
+                    const errorText = await response.text();
+                    log(`Upload error response: ${errorText}`, 'error');
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+            } catch (error) {
+                log(`Upload test failed: ${error.message}`, 'error');
+                resultDiv.innerHTML = `Upload test failed: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html> 

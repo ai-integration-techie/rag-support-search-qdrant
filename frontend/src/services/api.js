@@ -2,8 +2,8 @@ import axios from 'axios';
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: '/api',
-  timeout: 30000,
+  baseURL: 'http://localhost:9000/api',
+  timeout: 300000, // 5 minutes for large file uploads
   headers: {
     'Content-Type': 'application/json',
   },
@@ -60,6 +60,7 @@ export const uploadAPI = {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      timeout: 300000, // 5 minutes for large file uploads
     });
   },
 

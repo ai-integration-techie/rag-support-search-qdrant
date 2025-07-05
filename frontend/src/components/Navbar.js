@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Search, Upload, FileText, Home } from 'lucide-react';
+import { Search, Upload, FileText, Home, BookOpen } from 'lucide-react';
 
 const Navbar = () => {
   const location = useLocation();
@@ -42,6 +42,15 @@ const Navbar = () => {
             >
               <Upload size={18} />
               Upload
+            </Link>
+          </li>
+          <li>
+            <Link 
+              to="/docs" 
+              className={`nav-link ${isActive('/docs') ? 'active' : ''}`}
+            >
+              <BookOpen size={18} />
+              Docs
             </Link>
           </li>
           <li>

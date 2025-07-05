@@ -298,7 +298,7 @@ const Documents = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Database Path:</span>
-                  <span className="text-xs">./data/chroma_db</span>
+                  <span className="text-xs">./qdrant_data/collections/documents</span>
                 </div>
               </div>
             </div>
