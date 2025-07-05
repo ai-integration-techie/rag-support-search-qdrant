@@ -63,8 +63,8 @@ A powerful **Retrieval-Augmented Generation (RAG)** system that combines semanti
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/rag-support-search.git
-cd rag-support-search
+git clone https://github.com/ai-integration-techie/rag-support-search-qdrant.git
+cd rag-support-search-qdrant
 ```
 
 ### 2. Configure OpenAI API Key
@@ -179,9 +179,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/rag-support-search/issues)
-- **Documentation**: [Wiki](https://github.com/yourusername/rag-support-search/wiki)
-- **Email**: your.email@example.com
+- **Issues**: [GitHub Issues](https://github.com/ai-integration-techie/rag-support-search-qdrant/issues)
+- **Documentation**: [Wiki](https://github.com/ai-integration-techie/rag-support-search-qdrant/wiki)
+- **Email**: hiren.shah@gmail.com
 
 ---
 
